@@ -1,90 +1,84 @@
-from typing import Any, List, Tuple
 
 
-class MTSKruskal:
-    def __init__(self, graph: List[Tuple[str, str, float]], sort_result=True):
-        self.graph = graph
-        self.vertices = self._get_vertices()
-        self.result: List[Tuple[str, str, float]]
-        self.kruskal()
-        if sort_result:
-            self.result = sorted(self.result, key=lambda i: i[:-1])
+class MTS:
+    def __init__(self, egraph):
+        self.verts = MTS.load_verts(egraph)
+        self.egraph = egraph
+        self.result = None
+        self.run_kruskal()
+        self.result = sorted(self.result, key=lambda i: i[:-1])
 
-    def _get_vertices(self):
-        # Создаём список вершин на основе рёбер графа.
-        vertices = set(v for i in self.graph for v in i[:-1])
-        return list(sorted(vertices))
+    # Алгоритм Краскала для нахождения минимального остовного дерева
+    def run_kruskal(self):
+        # Сортируем рёбра по возрастанию длин
+        self.egraph = sorted(self.egraph, key=lambda e: e[2])
 
-    def find_parent(self, parent, node):
-        """
-        Нахождение множества для узла.
-        """
-        if parent[node] == node:
-            return node
-        return self.find_parent(parent, parent[node])
+        # Соотносит вершины к множеству
+        ranks = {}
 
-    def union(self, parent, rank, x, y):
-        """
-        Объединение подмножеств в множество.
-        """
-        xroot = self.find_parent(parent, x)
-        yroot = self.find_parent(parent, y)
+        # Указывает главные вершины во множествах
+        roots = {}
 
-        # Объединяем множество с меньшим рангом с
-        # множеством большего ранга.
-        if rank[xroot] < rank[yroot]:
-            parent[xroot] = yroot
-        elif rank[xroot] > rank[yroot]:
-            parent[yroot] = xroot
+        # Строит множества с каждой вершиной
+        for b in self.verts:
+            roots[b] = b
+            ranks[b] = 0
 
-        # Если ранги одинаковые, то один из них повышам
-        # и устанавливаем эл. как родительский.
-        else:
-            parent[yroot] = xroot
-            rank[xroot] += 1
+        i = 0  # Индекс рёбер для выборки
+        e = 0  # Индекс рёбер для построения ответа
+        result = []  # Ответ
 
-    def kruskal(self):
-        """
-        Функция для нахождения MST(Минимального остовного дерева).
-        Алгоритм Краскала.
-        """
-        # Сортируем рёбра по возрастанию длин.
-        self.graph = sorted(self.graph, key=lambda i: i[2])
+        # В результате только может быть рёбер меньше чем вершин
+        while e < len(self.verts) - 1:
+            # Ищем множества у двух вершин
+            a, b, weight = self.egraph[i]
+            first = self.find_set(roots, a)
+            second = self.find_set(roots, b)
 
-        ei = 0
-        ri = 0
-        result = []
-        parent = {}
+            # Если добавление этого ребра не создаст цикла, то добавляем его в ответ
+            if first != second:
+                e += 1
+                result.append([a, b, weight])
+                self.make_set_union(roots, ranks, first, second)
+            i += 1
 
-        # Даёт обозначение, вершина-множество
-        rank = {}
-
-        # Заполняем подмножества по одному узлу.
-        for node in self.vertices:
-            parent[node] = node
-            rank[node] = 0
-
-        # Конечное кол-во рёбер должно быть на 1 меньше,
-        # чем кол-во вершин.
-        while ri < len(self.vertices)-1:
-            # Берём наименьшее ребро и ищем циклы.
-            u, v, w = self.graph[ei]
-            ei += 1
-            x = self.find_parent(parent, u)
-            y = self.find_parent(parent, v)
-
-            # Если это ребро не создаёт цикла,
-            # то включаем его в ответ и углубляемся.
-            if x != y:
-                ri += 1
-                result.append([u, v, w])
-                self.union(parent, rank, x, y)
-
-        # Записываем ответ.
         self.result = result
 
+    # Вывод результата
+    def print_result(self):
+        full_weight = sum(item[2] for item in self.result)
+        for a, b, weight in self.result:
+            print(f'{a}--{b}  {weight}')
+        print(full_weight)
 
-ex46: Any = [
+    # Нахождение вершин из графа
+    def load_verts(egraph):
+        verts = set(v for i in egraph for v in i[:-1])
+        return list(sorted(verts))
+
+    # Ищет множество для узла
+    def find_set(self, roots, node):
+        if roots[node] == node:
+            return node
+        return self.find_set(roots, roots[node])
+
+    # Объединяет множества
+    def make_set_union(self, roots, rank, first, second):
+        main_v_1 = self.find_set(roots, first)
+        main_v_2 = self.find_set(roots, second)
+
+        # Включаем множество меньшего ранга во множество большего ранга
+        if rank[main_v_1] < rank[main_v_2]:
+            roots[main_v_1] = main_v_2
+        elif rank[main_v_1] > rank[main_v_2]:
+            roots[main_v_2] = main_v_1
+        else:
+            # Случай одинаковых рангов, один ранг повышаем и включаем множество с меньшим
+            roots[main_v_2] = main_v_1
+            rank[main_v_1] += 1
+
+
+primer46 = [
     ('1', '2', 2),
     ('1', '3', 3),
     ('1', '4', 4),
@@ -100,7 +94,18 @@ ex46: Any = [
     ('7', '8', 2.5)
 ]
 
-no41: Any = [
+mts46 = MTS(primer46)
+mts46.print_result()
+# 1--2  2
+# 1--3  3
+# 3--7  1
+# 4--5  1
+# 5--7  0.5
+# 6--7  1
+# 6--8  2
+# 10.5
+
+zadacha41 = [
     ('1', '2', 3),
     ('1', '3', 3),
     ('1', '4', 2),
@@ -125,30 +130,17 @@ no41: Any = [
     ('10', '11', 4)
 ]
 
-mts = MTSKruskal(no41)
-cost = sum(item[2] for item in mts.result)
-for u, v, weight in mts.result:
-    print(f"{u}-{v}  ({weight})")
-print(cost)
-# ex46:
-# 1-2  (2)
-# 1-3  (3)
-# 3-7  (1)
-# 4-5  (1)
-# 5-7  (0.5)
-# 6-7  (1)
-# 6-8  (2)
-# 10.5
+mts41 = MTS(zadacha41)
+mts41.print_result()
 
-# no41:
-# 1-4  (2)
-# 10-11  (4)
-# 2-3  (2)
-# 3-4  (2)
-# 4-5  (3)
-# 4-6  (3)
-# 6-7  (2)
-# 7-8  (3)
-# 8-9  (3)
-# 9-11  (4)
+# 1--4  2
+# 10--11  4
+# 2--3  2
+# 3--4  2
+# 4--5  3
+# 4--6  3
+# 6--7  2
+# 7--8  3
+# 8--9  3
+# 9--11  4
 # 28

@@ -1,65 +1,66 @@
 from queue import PriorityQueue
-from typing import Any, Dict, List, Optional, Set, Tuple
-maxsize = float('inf')
 
-class DijkstraPriorQ:
-    def __init__(self, graph: Dict[str, Set[Tuple[str, Any]]], src: str, dist: str):
-        self.graph: Dict[str, Set[Tuple[str, float]]] = graph
-        self.length = 0.
-        self.path: List[str] = []
-        self.run_dijkstra(src, dist)
 
-    def run_dijkstra(self, src: str, dist: str):
-        """
-        Алгоритм Дейкстры c приоритетной очередью.
-        """
-        visited = set()
-        length: Dict[str, float] = {src: 0}
-        parent: Dict[str, Optional[str]] = {src: None}
+class ShortPath:
+    def __init__(self, tgraph, start, end):
+        self.tgraph = tgraph
+        self.result_length = 0.0
+        self.result_path = []
+        self.run_dijkstra(start, end)
+
+    def print_result(self):
+        print('-'.join(self.result_path), f'  {self.result_length}')
+
+    def run_dijkstra(self, start, end):
+        visited = set()  # Посещённые вершины
+        length = {start: 0}  # Длины между вершинами и конечной вершиной
+        root = {start: None}  # Связь вершин (сами рёбра)
         queue: PriorityQueue = PriorityQueue()
 
-        queue.put((0, src))
+        queue.put((0, start))
         while queue:
             while not queue.empty():
-                # Находим ближайший узел и проверяем его на посещённость.
+                # Получаем ближайшую вершину
                 vertex = queue.get()[1]
+                # Если она была посещена, то выходим из цикла
                 if vertex not in visited:
                     break
             else:
-                # Если все узлы в очереди закончились, то завершаем алг.
+                # Если в очереди не осталось узлов для рассмотрения, то выходим из цикла
                 break
+            # Указываем текущую вершину как посещённую
             visited.add(vertex)
-            # Если узел целевой, то завершаем алг.
-            if vertex == dist:
+            # Если вершина конечная, то алгоритм сработал
+            if vertex == end:
                 break
-            # Рассчитываем пути до приоритетных узлов.
-            for neighbor, distance in self.graph[vertex]:
-                # Посещённые пропускаем.
-                if neighbor in visited:
+            # Рассчитываем пути до ключевых вершин на пути
+            for neariest, distance in self.tgraph[vertex]:
+                # Пропускаем посещённые вершины
+                if neariest in visited:
                     continue
-                old_length = length.get(neighbor, maxsize)
-                new_length = length[vertex] + distance
-                # Сравниваем старый самый короткий путь и
-                # новый, если новый короче, то углубляемся.
-                if new_length < old_length:
-                    queue.put((new_length, neighbor))
-                    length[neighbor] = new_length
-                    parent[neighbor] = vertex
+                prev_len = length.get(neariest, float('inf'))
+                current_len = length[vertex] + distance
+                # Выбираем кратчайший путь и продолжаем идти по нему,
+                # добавив его последний узел в очередь
+                if current_len < prev_len:
+                    queue.put((current_len, neariest))
+                    length[neariest] = current_len
+                    root[neariest] = vertex
 
-        # Строим обратный путь.
-        if dist not in parent:
+        self.result_length = length[end]
+        # Выстраиваем путь в обратном направлении
+        if end not in root:
             return None
-        v: Optional[str] = dist
-        path = []
-        while v is not None:
-            path.append(v)
-            v = parent[v]
-        # Инвертируем путь.
-        self.path = path[::-1]
-        self.length = length[dist]
+        vert = end
+        inv_path = []
+        while vert is not None:
+            inv_path.append(vert)
+            vert = root[vert]
+        # Переставляем путь в правильное направление
+        self.result_path = inv_path[::-1]
 
 
-ex45 = {
+primer45 = {
     '1': {('2', 1), ('3', 5), ('4', 4)},
     '2': {('1', 1), ('5', 7)},
     '3': {('1', 5), ('5', 2), ('6', 6), ('7', 2)},
@@ -73,14 +74,12 @@ ex45 = {
     '11': {('8', 5), ('9', 5), ('10', 4)}
 }
 
-# dij = DijkstraPriorQ(ex45, '1', '11')
-# print(dij.path)
-# print(dij.length)
-# ['1', '4', '6', '10', '11']
-# 14
+sp45 = ShortPath(primer45, '1', '11')
+sp45.print_result()
+# 1-4-6-10-11   14
 
 
-no40 = {
+zadacha40 = {
     '1': {('2', 2), ('3', 4), ('4', 3)},
     '2': {('1', 2), ('5', 6), ('6', 2)},
     '3': {('1', 4), ('5', 8), ('6', 2), ('7', 7)},
@@ -92,8 +91,6 @@ no40 = {
     '9': {('5', 8), ('6', 4), ('7', 3), ('10', 8)}
 }
 
-dij = DijkstraPriorQ(no40, '1', '10')
-# print(dij.path)
-# print(dij.length)
-# ['1', '2', '6', '9', '10']
-# 16
+sp40 = ShortPath(zadacha40, '1', '10')
+sp40.print_result()
+# 1-2-6-9-10   16

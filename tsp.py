@@ -1,21 +1,19 @@
 import math
-from typing import List
-maxsize = float('inf')
 
 
-class TSPBaB:
-    def __init__(self, matrix: List[List[int]]) -> None:
-        self.matrix = matrix
-        self.n = len(matrix)  # размерность матрицы
+class TSP:
+    def __init__(self, mgraph) -> None:
+        self.mgraph = mgraph
+        self.n = len(mgraph)  # размерность матрицы
         self.visited = [False] * self.n  # массив посещённости точек
-        self.path_length = maxsize  # длина результирующего пути
-        self.path = [-1] * (self.n + 1)  # результирующий путь
+        self.result_length = float('inf')  # длина результирующего пути
+        self.result_path = [-1] * (self.n + 1)  # результирующий путь
         self._curr_path = [-1] * (self.n+1)  # текущий путь
-        self._curr_bound = 0.  # текущая оценка
-        self._curr_weight = 0.  # текущая сумма
+        self._curr_bound = 0.0  # текущая оценка
+        self._curr_weight = 0.0  # текущая сумма
         self._curr_level = 1  # текущий уровень ветвления
 
-        # Рассчитываем оценку для начального узла.
+        # Рассчитываем оценку для первой вершины
         for i in range(self.n):
             self._curr_bound += (self.first_min(i) + self.second_min(i))
 
@@ -26,52 +24,46 @@ class TSPBaB:
         self._curr_path[0] = 0
 
         # Запускаем алгоритм.
-        self.TSPRecursive()
+        self.BranchAndBoundTSP()
 
-    def first_min(self, i):
-        """
-        Находит минимальную дугу с вершиной i.
-        """
-        min = maxsize
+    # Поиск кратчайшего ребра для вершины
+    def first_min(self, vert):
+        min = float('inf')
         for k in range(self.n):
-            if self.matrix[i][k] < min and i != k:
-                min = self.matrix[i][k]
+            if self.mgraph[vert][k] < min and vert != k:
+                min = self.mgraph[vert][k]
 
         return min
 
-    def second_min(self, i):
-        """
-        Находит две минимальных дуги с вершиной i и возвращает вторую.
-        """
-        first, second = maxsize, maxsize
+    # Поиск второй самой кратчайшей дуги для вершины
+    def second_min(self, vert):
+        first, second = float('inf'), float('inf')
         for j in range(self.n):
-            if i == j:
+            if vert == j:
                 continue
-            if self.matrix[i][j] <= first:
+            if self.mgraph[vert][j] <= first:
                 second = first
-                first = self.matrix[i][j]
+                first = self.mgraph[vert][j]
 
-            elif(self.matrix[i][j] <= second and self.matrix[i][j] != first):
-                second = self.matrix[i][j]
+            elif(self.mgraph[vert][j] <= second and self.mgraph[vert][j] != first):
+                second = self.mgraph[vert][j]
 
         return second
 
-    def TSPRecursive(self, curr_weight=0, level=1):
-        """
-        Решение задачи коммивояжера через метод ветвей и границ.
-        """
+    # Метод ветвей и границ
+    def BranchAndBoundTSP(self, curr_weight=0, level=1):
         # Случай, когда мы прошли через все узлы.
         if level == self.n:
 
             # Проверяем наличие дуги из последнего узла в первый.
-            if self.matrix[self._curr_path[level - 1]][self._curr_path[0]]:
+            if self.mgraph[self._curr_path[level - 1]][self._curr_path[0]]:
 
                 # Записываем всю длину пути и сравниваем её
-                curr_res = curr_weight + self.matrix[self._curr_path[level - 1]][self._curr_path[0]]
-                if curr_res < self.path_length:
-                    self.path = self._curr_path.copy()
-                    self.path[self.n] = self.path[0]
-                    self.path_length = curr_res
+                curr_res = curr_weight + self.mgraph[self._curr_path[level - 1]][self._curr_path[0]]
+                if curr_res < self.result_length:
+                    self.result_path = self._curr_path.copy()
+                    self.result_path[self.n] = self.result_path[0]
+                    self.result_length = curr_res
             return
 
         # Для всех остальных случаев решаем задачу оптимизации
@@ -79,9 +71,9 @@ class TSPBaB:
         for i in range(self.n):
             # Проверяем не является ли текущий узел
             # посещённым или находящимся на диагонали.
-            if self.matrix[self._curr_path[level-1]][i] and not self.visited[i]:
+            if self.mgraph[self._curr_path[level-1]][i] and not self.visited[i]:
                 old_curr_bound = self._curr_bound
-                curr_weight += self.matrix[self._curr_path[level - 1]][i]
+                curr_weight += self.mgraph[self._curr_path[level - 1]][i]
 
                 # Вычисляем оценку, но для 1 уровня отдельно.
                 if level == 1:
@@ -93,14 +85,14 @@ class TSPBaB:
 
                 # Проверяем текущую длину пути (self._curr_bound + curr_weight)
                 # если она меньше предыдущей, то углубляемся.
-                if self._curr_bound + curr_weight < self.path_length:
+                if self._curr_bound + curr_weight < self.result_length:
                     self._curr_path[level] = i
                     self.visited[i] = True
 
-                    self.TSPRecursive(curr_weight, level + 1)
+                    self.BranchAndBoundTSP(curr_weight, level + 1)
 
                 # Если же нет, то откатываем изменения в значениях.
-                curr_weight -= self.matrix[self._curr_path[level - 1]][i]
+                curr_weight -= self.mgraph[self._curr_path[level - 1]][i]
                 self._curr_bound = old_curr_bound
 
                 # Так же откатываем посещение узла.
@@ -111,7 +103,7 @@ class TSPBaB:
 
 
 def TSP(matrix):
-    tsp = TSPBaB(matrix)
+    tsp = TSP(matrix)
 
     print("Длина пути:", tsp.path_length)
     print("Путь:", '->'.join(str(tsp.path[i]+1) for i in range(tsp.n + 1)))
@@ -124,7 +116,7 @@ ex43 = [
     [5, 6, 4, 0, 7],
     [7, 6, 3, 7, 0]]
 
-# TSP(ex43)
+TSP(ex43)
 # Длина пути: 21
 # Путь: 1->2->5->3->4->1
 
@@ -135,6 +127,6 @@ no38 = [
     [1, 4, 6, 0, 1],
     [2, 5, 1, 8, 0]]
 
-# TSP(no38)
+TSP(no38)
 # Длина пути: 13
 # Путь: 1->4->5->3->2->1

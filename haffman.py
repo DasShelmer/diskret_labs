@@ -1,71 +1,76 @@
-from typing import Dict, Tuple
 
 
-def huffman(probs: Dict[str, int]) -> Dict[str, str]:
-    """
-    Возвращает для каждого символа соответствующий ему код, на основе его частоты.
-    """
-    # Частный случай оставшейся пары, просто добавляем 0 и 1 соотв.
-    if(len(probs) == 2):
-        return dict(zip(probs.keys(), ['0', '1']))
+# Поиск пары, двух самых редких символа
+def rariest_duo(probabilities):
+    def sort_query(item):
+        return (item[1], item[0])
 
-    # Объединяем две буквы и складываем их частоты
-    probs_prime = probs.copy()
-    char1, char2 = lowest_two_probs(probs)
-    p1, p2 = probs_prime.pop(char1), probs_prime.pop(char2)
-    probs_prime[char1 + char2] = p1 + p2
-
-    # Рекурсивно собираем код для каждого слова
-    codes = huffman(probs_prime)
-    # Разъединяем обратно буквы и добавляем остаточные 0 и 1
-    code_chars12 = codes.pop(char1 + char2)
-    codes[char1], codes[char2] = code_chars12 + '0', code_chars12 + '1'
-
-    return codes
+    sorted_probs = sorted(probabilities.items(), key=sort_query)
+    result = (sorted_probs[0][0], sorted_probs[1][0])
+    return result
 
 
-def lowest_two_probs(probs: Dict[str, int]) -> Tuple[str, str]:
-    """
-    Возвращает пару наиболее редких символов в словаре.
-    """
-    sorted_probs = sorted(probs.items(), key=lambda i: (i[1], i[0]))
-    return sorted_probs[0][0], sorted_probs[1][0]
+# Разбирает строку в соответствии с кодами для символов
+def decode_str(chars_dict, encoded_str):
+    result = ""
+    while encoded_str:
+        for char, code in chars_dict.items():
+            if encoded_str.startswith(code):
+                result += char
+                encoded_str = encoded_str[len(code):]
+    return result
 
 
-def huffman_decode(symbol_code: Dict[str, str], encoded: str):
-    res = ""
-    while encoded:
-        for symbol, code in symbol_code.items():
-            if encoded.startswith(code):
-                res += symbol
-                encoded = encoded[len(code):]
-    return res
+# Собирает строку в соответствии со словарём кодов для символов
+def encode_str(chars_dict, str_to_enc):
+    encoded_chars = (chars_dict[char] for char in str_to_enc)
+    return ''.join(encoded_chars)
 
 
-def huffman_encode(symbol_code: Dict[str, str], line: str):
-    return ''.join(symbol_code[char] for char in line)
+# Алгоритм Хаффмана
+def run_huffman(probabilities):
+    # Случай для оставшейся пары
+    if len(probabilities) == 2:
+        special_case = zip(probabilities.keys(), ['0', '1'])
+        return dict(special_case)
+
+    # Объединяем пару самых редких букв в слово
+    probabilities_prime = probabilities.copy()
+    rchar1, rchar2 = rariest_duo(probabilities)
+    prob1 = probabilities_prime.pop(rchar1)
+    prob2 = probabilities_prime.pop(rchar2)
+    # Суммируем их частоты появления
+    probabilities_prime[rchar1 + rchar2] = prob1 + prob2
+
+    # Рекурсивно выполняем алгоритм Хаффмана
+    result = run_huffman(probabilities_prime)
+
+    # Разбиваем слова на буквы
+    resulted_chars = result.pop(rchar1 + rchar2)
+
+    # Добавляем 0 и 1 в конец
+    result[rchar2] = resulted_chars + '1'
+    result[rchar1] = resulted_chars + '0'
+
+    return result
 
 
-# Примеры
-example1 = {'a': 2, 'b': 1, 'c': 1}
-#print(huffman(example1))
-# {'a': '0', 'b': '10', 'c': '11'}
+primer38 = {'а': 15, 'н': 9, 'о': 28, 'е': 25, 'т': 8, 'и': 15}
+print(run_huffman(primer38))
+# {'о': '10', 'е': '01', 'и': '111', 'а': '110', 'н': '001', 'т': '000'}
 
-example2 = {'a': 3, 'b': 3, 'c': 2, 'd': 1, 'e': 1}
-#print(huffman(example2))
-# {'a': '10', 'b': '11', 'c': '00', 'd': '010', 'e': '011'}
+zadacha33 = {'а': 16, 'н': 8, 'о': 24, 'е': 27, 'т': 9, 'и': 16}
+print(run_huffman(zadacha33))
+# {'е': '10', 'о': '01', 'и': '111', 'а': '110', 'т': '001', 'н': '000'}
 
-ex38 = {'а': 15, 'н': 9, 'о': 28, 'е': 25, 'т': 8, 'и': 15}
-#print(huffman(ex38))
+primer39 = {'е': '10', 'н': '110', 'о': '01', 'т': '111'}
+print(encode_str(primer39, 'енот'))
+# 1011001111
 
-no33 = {'а': 16, 'н': 8, 'о': 24, 'е': 27, 'т': 9, 'и': 16}
-#print(huffman(no33))
+zadacha34 = run_huffman(zadacha33)
+print(encode_str(zadacha34, 'тина'))
+# 001111000110
 
-ex39 = {'е': '10', 'н': '110', 'о': '01', 'т': '111'}
-#print(huffman_encode(ex39, 'енот'))
-
-no34 = huffman(no33)
-#print(huffman_encode(no34, 'тина'))
-
-ex40 = {'а': '000', 'и': '001', 'о': '01', 'е': '10', 'н': '110', 'т': '111'}
-#print(huffman_decode(ex40, '1100101111'))
+primer40 = {'а': '000', 'и': '001', 'о': '01', 'е': '10', 'н': '110', 'т': '111'}
+print(decode_str(primer40, '1100101111'))
+# ноот
